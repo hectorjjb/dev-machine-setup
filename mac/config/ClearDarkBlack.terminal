@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BackgroundBlur</key>
+	<real>0.0</real>
+	<key>BackgroundColor</key>
+	<data>
+	YnBsaXN0MDDUAQIDBAUGFRhZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25f
+	EA9OU0tleWVkQXJjaGl2ZXKjBwgPVSRudWxs0wkKCwwNDlYkY2xhc3NcTlNDb2xvclNw
+	YWNlVU5TUkdCgAIQAUowIDAgMCAwLjgA0hAREhNYJGNsYXNzZXNaJGNsYXNzbmFtZaIT
+	FFdOU0NvbG9yWE5TT2JqZWN00RYXVHJvb3SAARIAAYagCBEbJCkyREhOVVxpb3FzfoOM
+	l5qiq66ztQAAAAAAAAEBAAAAAAAAABkAAAAAAAAAAAAAAAAAAAC6
+	</data>
+	<key>BackgroundSettingsForInactiveWindows</key>
+	<true/>
+	<key>CursorColor</key>
+	<data>
+	YnBsaXN0MDDUAQIDBAUGFRhZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25f
+	EA9OU0tleWVkQXJjaGl2ZXKjBwgPVSRudWxs0wkKCwwNDlYkY2xhc3NcTlNDb2xvclNw
+	YWNlVU5TUkdCgAIQAUwwLjggMC44IDAuOADSEBESE1gkY2xhc3Nlc1okY2xhc3NuYW1l
+	ohMUV05TQ29sb3JYTlNPYmplY3TRFhdUcm9vdIABEgABhqAIERskKTJESE5VXGlvcXOA
+	hY6ZnKStsLW3AAAAAAAAAQEAAAAAAAAAGQAAAAAAAAAAAAAAAAAAALw=
+	</data>
+	<key>Font</key>
+	<data>
+	YnBsaXN0MDDUAQIDBAUGGBtZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25f
+	EA9OU0tleWVkQXJjaGl2ZXKkBwgRElUkbnVsbNQJCgsMDQ4PEFYkY2xhc3NWTlNOYW1l
+	Vk5TU2l6ZVhOU2ZGbGFnc4ADgAIjQCwAAAAAAAAQEF8QHENhc2theWRpYUNvdmUgTmVy
+	ZCBGb250IE1vbm/SExQVFlgkY2xhc3Nlc1okY2xhc3NuYW1lohYXVk5TRm9udFhOU09i
+	amVjdNEZGlRyb290gAESAAGGoAgRGyQpMkRJT1hfZm12eHqDhaSpsr3Ax9DT2NoAAAAA
+	AAABAQAAAAAAAAAcAAAAAAAAAAAAAAAAAAAA3w==
+	</data>
+	<key>ProfileCurrentVersion</key>
+	<real>2.09</real>
+	<key>TextBoldColor</key>
+	<data>
+	YnBsaXN0MDDUAQIDBAUGFRhZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25f
+	EA9OU0tleWVkQXJjaGl2ZXKjBwgPVSRudWxs0wkKCwwNDlYkY2xhc3NcTlNDb2xvclNw
+	YWNlVU5TUkdCgAIQAUYxIDEgMQDSEBESE1gkY2xhc3Nlc1okY2xhc3NuYW1lohMUV05T
+	Q29sb3JYTlNPYmplY3TRFhdUcm9vdIABEgABhqAIERskKTJESE5VXGlvcXN6f4iTlp6n
+	qq+xAAAAAAAAAQEAAAAAAAAAGQAAAAAAAAAAAAAAAAAAALY=
+	</data>
+	<key>TextColor</key>
+	<data>
+	YnBsaXN0MDDUAQIDBAUGFRhZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25f
+	EA9OU0tleWVkQXJjaGl2ZXKjBwgPVSRudWxs0wkKCwwNDlYkY2xhc3NcTlNDb2xvclNw
+	YWNlVU5TUkdCgAIQAU8QDzAuODUgMC44NSAwLjg1ANIQERITWCRjbGFzc2VzWiRjbGFz
+	c25hbWWiExRXTlNDb2xvclhOU09iamVjdNEWF1Ryb290gAESAAGGoAgRGyQpMkRITlVc
+	aW9xc4WKk56hqbK1urwAAAAAAAABAQAAAAAAAAAZAAAAAAAAAAAAAAAAAAAAwQ==
+	</data>
+	<key>columnCount</key>
+	<integer>120</integer>
+	<key>name</key>
+	<string>ClearDarkBlack</string>
+	<key>rowCount</key>
+	<integer>30</integer>
+	<key>type</key>
+	<string>Window Settings</string>
+</dict>
+</plist>

@@ -84,5 +84,7 @@ The setting persists across reboots automatically.
 - zsh-syntax-highlighting (sourced at end of .zshrc)
 - Prompt: **Oh My Posh** with the `mt.omp.json` theme (overrides the Oh My Zsh
   `agnoster` fallback theme when `oh-my-posh` is available)
-- Fonts: Fira Code Nerd Font and CaskaydiaCove Nerd Font; Terminal.app and
-  VS Code are set to **CaskaydiaCove Nerd Font Mono**
+- Fonts: Fira Code Nerd Font and CaskaydiaCove Nerd Font; Terminal.app uses the
+  bundled **`ClearDarkBlack`** profile ([`config/ClearDarkBlack.terminal`](config/ClearDarkBlack.terminal)
+  — CaskaydiaCove Nerd Font Mono on a pure-black background at 80% opacity, no
+  blur), and VS Code is set to **CaskaydiaCove Nerd Font Mono**

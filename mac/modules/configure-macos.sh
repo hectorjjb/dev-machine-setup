@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Close any open System Settings panes, to prevent them from overriding settings we're about to change
 osascript -e 'tell application "System Settings" to quit'
 
@@ -490,10 +492,6 @@ echo "Configuring Terminal & iTerm..."
 # Only use UTF-8 in Terminal.app
 defaults write com.apple.terminal StringEncodings -array 4
 
-# Set "Pro" as the default profile in Terminal.app
-defaults write com.apple.terminal "Default Window Settings" -string "Pro"
-defaults write com.apple.terminal "Startup Window Settings" -string "Pro"
-
 # Enable “focus follows mouse” for Terminal.app and all X11 apps
 # i.e. hover over a window and start typing in it without clicking first
 #defaults write com.apple.terminal FocusFollowsMouse -bool true
@@ -505,34 +503,34 @@ defaults write com.apple.terminal SecureKeyboardEntry -bool true
 
 # Disable the annoying line marks
 defaults write com.apple.Terminal ShowLineMarks -int 0
-# Set font to CaskaydiaCove Nerd Font in Terminal.app's "Pro" profile
-FONT_NAME="CaskaydiaCove Nerd Font Mono"
-FONT_SIZE=14
-python3 -c "
-import plistlib, sys, os
-try:
-    from AppKit import NSFont
-    from Foundation import NSKeyedArchiver
-    font = NSFont.fontWithName_size_('${FONT_NAME}', ${FONT_SIZE})
-    if font is None:
-        print('⚠ Font ${FONT_NAME} not found — is it installed?')
-        sys.exit(1)
-    font_data = bytes(NSKeyedArchiver.archivedDataWithRootObject_(font))
-    plist_path = os.path.expanduser('~/Library/Preferences/com.apple.Terminal.plist')
-    with open(plist_path, 'rb') as f:
-        plist = plistlib.load(f)
-    plist.setdefault('Window Settings', {}).setdefault('Pro', {})['Font'] = font_data
-    with open(plist_path, 'wb') as f:
-        plistlib.dump(plist, f)
-    print('Set Terminal.app Pro font to ${FONT_NAME} ${FONT_SIZE}pt')
-except Exception as e:
-    print(f'⚠ Could not set Terminal.app font: {e}')
-    sys.exit(1)
-" || true
+
+# Import the custom "ClearDarkBlack" profile and make it the default.
+#
+# We import a bundled .terminal profile file (CaskaydiaCove Nerd Font + pure
+# black background at 80% opacity, no blur) rather than editing
+# com.apple.Terminal.plist directly. Terminal.app caches its preferences in
+# memory and rewrites the plist on quit, so direct plist edits are ignored while
+# it is running and clobbered on quit — and AppleScript cannot set window
+# opacity. Importing a .terminal file (named after the file => profile
+# "ClearDarkBlack") is the only channel that reliably carries transparency and
+# survives a relaunch. macOS 26 / Tahoe retired the old "Pro" profile, so we
+# ship our own instead of relying on a built-in one.
+TERM_PROFILE="ClearDarkBlack"
+TERM_PROFILE_FILE="$SCRIPT_DIR/../config/${TERM_PROFILE}.terminal"
+if [ -f "$TERM_PROFILE_FILE" ]; then
+  open "$TERM_PROFILE_FILE"
+  sleep 1
+  defaults write com.apple.terminal "Default Window Settings" -string "$TERM_PROFILE"
+  defaults write com.apple.terminal "Startup Window Settings" -string "$TERM_PROFILE"
+  echo "Imported Terminal profile '$TERM_PROFILE' and set it as default"
+else
+  echo "⚠ Terminal profile not found: $TERM_PROFILE_FILE"
+fi
 
 # Set font in VS Code settings
 # VS Code uses JSONC (JSON with comments & trailing commas), so we use a
 # regex-based approach instead of strict json.load() which would choke on it.
+FONT_NAME="CaskaydiaCove Nerd Font Mono"
 VSCODE_SETTINGS="$HOME/Library/Application Support/Code/User/settings.json"
 if [ -f "$VSCODE_SETTINGS" ]; then
   python3 -c "
