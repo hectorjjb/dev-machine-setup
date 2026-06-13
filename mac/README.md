@@ -6,11 +6,12 @@
 bash mac/setup-new-mac.sh
 ```
 
-This runs three modules in order:
+This runs four modules in order:
 
-1. **configure-macos.sh** — System preferences (Finder, Dock, keyboard, screenshots, etc.)
-2. **brew-essentials.sh** — Homebrew + CLI tools + apps
-3. **install-zsh.sh** — Oh My Zsh, plugins, and theme
+1. **brew-essentials.sh** — Homebrew + CLI tools + apps + fonts (declared in [`Brewfile`](Brewfile) and installed via `brew bundle`), Node.js via fnm, global npm packages, and global git config
+2. **configure-macos.sh** — System preferences (Finder, Dock, keyboard, screenshots, etc.)
+3. **appstore-apps.sh** — Mac App Store apps (requires being signed into the App Store)
+4. **install-zsh.sh** — Oh My Zsh, plugins, and the Oh My Posh prompt
 
 The script is idempotent — safe to run multiple times. It will repair broken settings from previous runs.
 
@@ -55,19 +56,33 @@ The setting persists across reboots automatically.
 - Microsoft Teams
 - GitHub Desktop
 - Spotify
-- WhatsApp
 - VLC
+
+### Mac App Store apps (via `mas`)
+- Xcode
+- Microsoft Word, Excel, PowerPoint, Outlook
+- OneDrive, Microsoft Copilot, Microsoft To Do
+- WhatsApp
+
+> The script also removes the pre-installed Pages, Numbers, and Keynote.
+> Requires being signed into the App Store before running.
 
 ### CLI Tools (via Homebrew)
 - git, git-lfs, gh (GitHub CLI)
 - wget, tree, jq
 - ripgrep, fd, bat, fzf
-- fnm (Node.js version manager)
+- fnm (Node.js version manager), nx
 - .NET SDK
+
+### Git
+- Global `user.name` / `user.email` configured (parity with the Windows setup)
+- `git lfs install`
 
 ### Zsh
 - Oh My Zsh
-- Theme: `agnoster`
 - Plugins: `git`, `z`, `zsh-autosuggestions`, `node`
 - zsh-syntax-highlighting (sourced at end of .zshrc)
-- Font: Fira Code Nerd Font (required for agnoster theme)
+- Prompt: **Oh My Posh** with the `mt.omp.json` theme (overrides the Oh My Zsh
+  `agnoster` fallback theme when `oh-my-posh` is available)
+- Fonts: Fira Code Nerd Font and CaskaydiaCove Nerd Font; Terminal.app and
+  VS Code are set to **CaskaydiaCove Nerd Font Mono**

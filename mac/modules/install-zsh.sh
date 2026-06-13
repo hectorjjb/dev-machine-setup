@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Detect machine
 unameOut="$(uname -s)"
@@ -10,7 +11,7 @@ case "${unameOut}" in
   *)          MACHINE="UNKNOWN:${unameOut}"
 esac
 
-echo $MACHINE
+echo "$MACHINE"
 
 # Installs .oh-my-zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -47,7 +48,7 @@ chmod 700 "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
 ###############################################################################
 ZSHRC="$HOME/.zshrc"
 if [ ! -f "$ZSHRC" ]; then
-  echo "~/.zshrc not found — skipping configuration"
+  echo "\$HOME/.zshrc not found — skipping configuration"
   exit 0
 fi
 

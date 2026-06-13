@@ -50,13 +50,13 @@ $apps = @(
     @{name = "XP89DCGQ3K6VLD"; source = "msstore" },    # Microsoft PowerToys
     @{name = "GitHub.GitLFS" },
     @{name = "OpenJS.NodeJS.LTS" },
-    @{name = "Microsoft.DotNet.SDK.8" },
-    @{name = "Canonical.Ubuntu.2204" },
+    @{name = "Microsoft.DotNet.SDK.10" },
+    @{name = "Canonical.Ubuntu.2404" },
     @{name = "XP8K0HKJFRXGCK"; source = "msstore" },    # oh-my-posh
     # @{name = "Postman.Postman" },
-    @{name = "Python.Python.3.12" },
+    @{name = "Python.Python.3.13" },
     @{name = "Google.Chrome" },
-    @{name = "Microsoft.VisualStudio.2022.Enterprise" },
+    @{name = "Microsoft.VisualStudio.Enterprise" },    # Visual Studio 2026 Enterprise
     @{name = "9NCBCSZSJRSB"; source = "msstore" },      # Spotify
     @{name = "9NKSQGP7F2NH"; source = "msstore" }       # WhatsApp
     @{name = "9WZDNCRFJ3TJ"; source = "msstore" }       # Netflix
@@ -159,12 +159,12 @@ catch {
     Write-Output "Error enabling git lfs: $_"
 }
 
-# Update SWL
+# Update WSL
 try {
     wsl --update
 }
 catch {
-    Write-Output "Error enabling git lfs: $_"
+    Write-Output "Error updating WSL: $_"
 }
 
 # Update npm
@@ -172,7 +172,7 @@ try {
     npm install --global npm
 }
 catch {
-    Write-Output "Error enabling git lfs: $_"
+    Write-Output "Error updating npm: $_"
 }
 
 # Install yarn
@@ -180,7 +180,7 @@ try {
     npm install --global yarn
 }
 catch {
-    Write-Output "Error enabling git lfs: $_"
+    Write-Output "Error installing yarn: $_"
 }
 
 # Install nx globally
@@ -189,14 +189,6 @@ try {
 }
 catch {
     Write-Output "Error installing nx: $_"
-}
-
-# Install Azure DevOps (formerly VSTS) Auth helper for npm
-try {
-    npm install -g vsts-npm-auth --registry https://registry.npmjs.com --always-auth false
-}
-catch {
-    Write-Output "Error installing Azure DevOps (formerly VSTS) Auth helper for npm: $_"
 }
 
 ###############################################################################

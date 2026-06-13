@@ -1,0 +1,35 @@
+# Brewfile — declarative list of Homebrew packages for `brew bundle`.
+# Installed by mac/modules/brew-essentials.sh via:
+#   brew bundle --file mac/Brewfile
+# Add/remove entries here instead of editing the install script.
+
+# Taps
+tap "jandedobbeleer/oh-my-posh"
+
+# CLI tools
+brew "mas"               # Mac App Store CLI (used by appstore-apps.sh)
+brew "wget"
+brew "git"
+brew "git-lfs"
+brew "tree"
+brew "gh"                # GitHub CLI
+brew "ripgrep"
+brew "fd"
+brew "bat"
+brew "jq"
+brew "fzf"
+brew "fnm"               # Fast Node.js version manager
+brew "jandedobbeleer/oh-my-posh/oh-my-posh"
+
+# Apps (casks)
+cask "visual-studio-code"
+cask "microsoft-edge"
+cask "microsoft-teams"
+cask "github"            # GitHub Desktop
+cask "spotify"
+cask "vlc"
+cask "dotnet-sdk"
+
+# Fonts
+cask "font-fira-code-nerd-font"
+cask "font-caskaydia-cove-nerd-font"

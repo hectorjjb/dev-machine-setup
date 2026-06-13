@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Install Homebrew (if not installed)
 if ! command -v brew &> /dev/null; then
   echo "Installing Homebrew."
@@ -20,56 +22,30 @@ brew update
 # Upgrade any already-installed formulae.
 brew upgrade
 
-# Save Homebrew’s installed location.
-BREW_PREFIX=$(brew --prefix)
+# Install everything declared in the Brewfile (formulae, casks, fonts, taps).
+# Idempotent — `brew bundle` skips anything already installed.
+brew bundle --file "$SCRIPT_DIR/../Brewfile"
 
-# Casks are built-in since Homebrew 4.0 — no need for `brew tap homebrew/cask`
-
-## Apps I use
-CASK_APPS=(spotify visual-studio-code vlc microsoft-edge microsoft-teams github)
-for cask in "${CASK_APPS[@]}"; do
-  if brew list --cask "$cask" &>/dev/null; then
-    echo "Already installed: $cask"
-  else
-    brew install --cask "$cask" || true
-  fi
-done
-
-brew install mas || true
-brew install wget || true
-brew install git || true
-brew install git-lfs || true
-brew install tree || true
-
-# Modern CLI essentials
-brew install gh || true
-brew install ripgrep || true
-brew install fd || true
-brew install bat || true
-brew install jq || true
-brew install fzf || true
-
-# Fonts
-brew install --cask font-fira-code-nerd-font || true
-brew install --cask font-caskaydia-cove-nerd-font || true
-
-# Oh My Posh prompt
-brew install jandedobbeleer/oh-my-posh/oh-my-posh || true
-
-# Node.js (latest LTS version via fnm)
-brew install fnm || true
+# Node.js (latest LTS version via fnm — fnm itself comes from the Brewfile)
 if command -v fnm &> /dev/null; then
   eval "$(fnm env)"
   fnm install --lts
   fnm default lts-latest
 fi
 
-# Install nx globally
+# Install global npm packages
 npm install --global npm || true
 npm install --global nx || true
 
-# .NET SDK (latest LTS version)
-brew install --cask dotnet-sdk || true
-
 # Remove outdated versions from the cellar.
 brew cleanup
+
+# Git configuration (parity with the Windows setup)
+if command -v git &> /dev/null; then
+  git config --global user.name "Hector Jimenez"
+  git config --global user.email hectorjimenez@outlook.com
+  echo "Configured global git user.name / user.email"
+fi
+if command -v git-lfs &> /dev/null || command -v git &> /dev/null; then
+  git lfs install || true
+fi
