@@ -1,5 +1,15 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
+# Require elevation — several steps (registry, system-scope git config,
+# Remove-AppxPackage -AllUsers, WSL feature) silently fail without it.
+$isAdmin = ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+        [Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Error "This script must be run in an elevated PowerShell (Run as Administrator)."
+    exit 1
+}
+
 #Install WinGet
 #Based on this gist: https://gist.github.com/crutkas/6c2096eae387e544bd05cde246f23901
 $hasPackageManager = Get-AppPackage -name 'Microsoft.DesktopAppInstaller'
@@ -21,48 +31,36 @@ else {
     "winget already installed"
 }
 
-#Configure WinGet
-Write-Output "Configuring winget"
-
-#winget config path from: https://github.com/microsoft/winget-cli/blob/master/doc/Settings.md#file-location
-$settingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json";
-$settingsJson = 
-@"
-    {
-        // For documentation on these settings, see: https://aka.ms/winget-settings
-        "experimentalFeatures": {
-          "experimentalMSStore": true,
-        }
-    }
-"@;
-$settingsJson | Out-File $settingsPath -Encoding utf8
+# The msstore source has been built-in and stable since winget 1.6,
+# so no experimental settings.json is needed anymore.
 
 #Install New apps
 Write-Output "Installing Apps"
 $apps = @(
     @{name = "Git.Git" },
-    @{name = "Microsoft.NuGet" },
-    @{name = "Microsoft.AzureCLI" }, 
-    @{name = "Microsoft.PowerShell" }, 
-    @{name = "Microsoft.VisualStudioCode" }, 
-    @{name = "9N0DX20HK701"; source = "msstore" },      # Microsoft Windows Terminal
-    # @{name = "Microsoft.Azure.StorageExplorer" }, 
-    @{name = "XP89DCGQ3K6VLD"; source = "msstore" },    # Microsoft PowerToys
+    @{name = "GitHub.cli" },
     @{name = "GitHub.GitLFS" },
+    @{name = "Microsoft.AzureCLI" },
+    @{name = "Microsoft.PowerShell" },
+    @{name = "Microsoft.WindowsTerminal" },
+    @{name = "Microsoft.VisualStudioCode" },
+    @{name = "JanDeDobbeleer.OhMyPosh" },
+    @{name = "XP89DCGQ3K6VLD"; source = "msstore" },    # Microsoft PowerToys
     @{name = "OpenJS.NodeJS.LTS" },
     @{name = "Microsoft.DotNet.SDK.10" },
+    @{name = "Python.Python.3.14" },
     @{name = "Canonical.Ubuntu.2404" },
-    @{name = "XP8K0HKJFRXGCK"; source = "msstore" },    # oh-my-posh
-    # @{name = "Postman.Postman" },
-    @{name = "Python.Python.3.13" },
-    @{name = "Google.Chrome" },
+    @{name = "Docker.DockerDesktop" },
     @{name = "Microsoft.VisualStudio.Enterprise" },    # Visual Studio 2026 Enterprise
-    @{name = "9NCBCSZSJRSB"; source = "msstore" },      # Spotify
-    @{name = "9NKSQGP7F2NH"; source = "msstore" }       # WhatsApp
-    @{name = "9WZDNCRFJ3TJ"; source = "msstore" }       # Netflix
-    @{name = "XP9CDQW6ML4NQN"; source = "msstore" }     # Plex
-    @{name = "7zip.7zip" },
-    @{name = "XP99J3KP4XZ4VV"; source = "msstore" }     # Zoom
+    # @{name = "Microsoft.Azure.StorageExplorer" },
+    # @{name = "Postman.Postman" },
+    # @{name = "Google.Chrome" },
+    @{name = "9NCBCSZSJRSB"; source = "msstore" },     # Spotify
+    @{name = "9NKSQGP7F2NH"; source = "msstore" },     # WhatsApp
+    @{name = "9WZDNCRFJ3TJ"; source = "msstore" },     # Netflix
+    @{name = "XP9CDQW6ML4NQN"; source = "msstore" },   # Plex
+    @{name = "7zip.7zip" }
+    # @{name = "XP99J3KP4XZ4VV"; source = "msstore" }  # Zoom
 );
 
 foreach ($app in $apps) {
@@ -89,23 +87,53 @@ foreach ($app in $apps) {
 #Remove Apps
 Write-Output "Removing Apps"
 
-$apps = "*3DPrint*", "Microsoft.MixedReality.Portal", "Microsoft.SkypeApp"
+$apps = @(
+    "*3DPrint*",
+    "Microsoft.MixedReality.Portal",
+    "Microsoft.SkypeApp",
+    "Microsoft.BingNews",
+    "Microsoft.BingWeather",
+    "Microsoft.GetHelp",
+    "Microsoft.Getstarted",
+    "Microsoft.WindowsFeedbackHub",
+    "Clipchamp.Clipchamp",
+    "MicrosoftCorporationII.QuickAssist"
+)
 foreach ($app in $apps) {
     try {
         Write-Host "Uninstalling $($app)"
-        Get-AppxPackage -AllUsers $app | Remove-AppxPackage | Out-Null
+        Get-AppxPackage -AllUsers $app | Remove-AppxPackage -AllUsers | Out-Null
     }
     catch {
         Write-Output "Error uninstalling $($app): $_"
     }
 }
 
+# Refresh PATH and other env vars (e.g. POSH_THEMES_PATH set by the
+# oh-my-posh installer) in the current session so tools just installed
+# by winget are usable in the steps below without requiring a new shell.
+$env:Path = `
+    [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + `
+    [System.Environment]::GetEnvironmentVariable("Path", "User")
+$env:POSH_THEMES_PATH = `
+    [System.Environment]::GetEnvironmentVariable("POSH_THEMES_PATH", "Machine")
+if (-not $env:POSH_THEMES_PATH) {
+    $env:POSH_THEMES_PATH = `
+        [System.Environment]::GetEnvironmentVariable("POSH_THEMES_PATH", "User")
+}
+if (-not $env:POSH_THEMES_PATH) {
+    # Fall back to the default install location used by the winget package.
+    $env:POSH_THEMES_PATH = "$env:LOCALAPPDATA\Programs\oh-my-posh\themes"
+}
+
 # Install WSL
 # https://learn.microsoft.com/en-us/windows/wsl/install
 Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -OutVariable WSLStatus | Out-Null
+$wslFreshlyInstalled = $false
 if ($WSLStatus.State -ne "Enabled") {
     wsl --install
-} 
+    $wslFreshlyInstalled = $true
+}
 else {
     Write-Host "WSL already installed. Skipping..."
 }
@@ -119,12 +147,14 @@ catch {
     Write-Output "Error enabling long paths: $_"
 }
 
-# Use Terminal-Icons to add missing folder or file icons
+# Use Terminal-Icons to add missing folder or file icons,
+# and posh-git for git status integration in the prompt.
 try {
     Install-Module -Name Terminal-Icons -Repository PSGallery -Force
+    Install-Module -Name posh-git       -Repository PSGallery -Force
 }
 catch {
-    Write-Output "Error enabling git long paths: $_"
+    Write-Output "Error installing PowerShell modules: $_"
 }
 
 # Enable git long paths
@@ -159,12 +189,17 @@ catch {
     Write-Output "Error enabling git lfs: $_"
 }
 
-# Update WSL
-try {
-    wsl --update
+# Update WSL (skip if WSL was just installed — needs a reboot first)
+if ($wslFreshlyInstalled) {
+    Write-Host "WSL was just installed — skipping 'wsl --update' until after reboot."
 }
-catch {
-    Write-Output "Error updating WSL: $_"
+else {
+    try {
+        wsl --update
+    }
+    catch {
+        Write-Output "Error updating WSL: $_"
+    }
 }
 
 # Update npm
@@ -176,16 +211,20 @@ catch {
 }
 
 # Install yarn
+# --allow-scripts permits yarn's preinstall script (no-op on Windows) and
+# silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global yarn
+    npm install --global yarn --allow-scripts=yarn
 }
 catch {
     Write-Output "Error installing yarn: $_"
 }
 
 # Install nx globally
+# --allow-scripts permits nx's postinstall script (soft-fails by design)
+# and silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global nx
+    npm install --global nx --allow-scripts=nx
 }
 catch {
     Write-Output "Error installing nx: $_"
@@ -200,13 +239,18 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 # Copy mt.omp.json theme to Oh My Posh themes directory
 try {
     $themeSrc = Join-Path $ScriptDir "config\mt.omp.json"
-    $themeDst = Join-Path $env:POSH_THEMES_PATH "mt.omp.json"
-    if ($env:POSH_THEMES_PATH -and (Test-Path $env:POSH_THEMES_PATH)) {
+    if ($env:POSH_THEMES_PATH) {
+        if (-not (Test-Path $env:POSH_THEMES_PATH)) {
+            # oh-my-posh creates this folder lazily on first run; pre-create it
+            # so we can drop the theme in place even on a fresh install.
+            New-Item -ItemType Directory -Path $env:POSH_THEMES_PATH -Force | Out-Null
+        }
+        $themeDst = Join-Path $env:POSH_THEMES_PATH "mt.omp.json"
         Copy-Item -Path $themeSrc -Destination $themeDst -Force
         Write-Host "Copied mt.omp.json to $themeDst"
     }
     else {
-        Write-Host "POSH_THEMES_PATH not set or not found — skipping theme copy"
+        Write-Host "POSH_THEMES_PATH not set — skipping theme copy"
     }
 }
 catch {

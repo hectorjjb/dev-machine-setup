@@ -16,7 +16,9 @@ The script is idempotent — already-installed apps are skipped and re-running i
 
 1. **Installs WinGet** (Windows Package Manager) if missing or outdated, and enables the experimental Microsoft Store source.
 2. **Installs apps** via WinGet and the Microsoft Store (see list below).
-3. **Removes** unwanted pre-installed apps (3D Print, Mixed Reality Portal, Skype).
+3. **Removes** unwanted pre-installed apps (3D Print, Mixed Reality Portal,
+   Skype, Bing News/Weather, Get Help, Tips, Feedback Hub, Clipchamp,
+   Quick Assist).
 4. **Enables WSL** (Windows Subsystem for Linux) and installs Ubuntu.
 5. **Enables long paths** (registry + `git config --system core.longpaths`).
 6. **Configures git** — user name/email and `git lfs install`.
@@ -30,17 +32,18 @@ The script is idempotent — already-installed apps are skipped and re-running i
 ## What Gets Installed
 
 ### Apps (WinGet / Microsoft Store)
-- Git, Git LFS, GitHub
-- .NET SDK 10, Node.js LTS, Python 3.13, NuGet
+- Git, Git LFS, GitHub CLI (`gh`)
+- .NET SDK 10 (includes `dotnet` CLI), Node.js LTS, Python 3.14
 - Visual Studio 2026 Enterprise, Visual Studio Code
 - Azure CLI, PowerShell 7, Windows Terminal, PowerToys
+- Docker Desktop
 - Ubuntu 24.04 (WSL), 7-Zip
-- Google Chrome, Spotify, WhatsApp, Netflix, Plex, Zoom
+- Spotify, WhatsApp, Netflix, Plex
 
 ### Shell
-- **Oh My Posh** prompt with the `mt.omp.json` theme
+- **Oh My Posh** prompt (winget source) with the `mt.omp.json` theme
 - **CaskaydiaCove Nerd Font**
-- **Terminal-Icons** PowerShell module
+- **Terminal-Icons** and **posh-git** PowerShell modules
 
 ---
 
