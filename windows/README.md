@@ -22,7 +22,11 @@ The script is idempotent — already-installed apps are skipped and re-running i
 4. **Enables WSL** (Windows Subsystem for Linux) and installs Ubuntu.
 5. **Enables long paths** (registry + `git config --system core.longpaths`).
 6. **Configures git** — user name/email and `git lfs install`.
-7. **Sets up Node tooling** — updates npm, installs yarn and nx globally.
+7. **Sets up Node tooling** — installs the latest Node.js LTS release through
+   fnm, makes it the default, routes npm, pnpm, Yarn, and Corepack through
+   Microsoft's CFS-protected package feed, updates npm, and installs yarn and
+   nx globally. It also permits npm's `remote` package type because npm 12
+   classifies the protected feed's Azure DevOps tarball URLs as remote.
 8. **Configures Oh My Posh** — copies the `mt.omp.json` theme, installs the
    CaskaydiaCove Nerd Font, and installs the PowerShell profile from
    `config/Microsoft.PowerShell_profile.ps1`.
@@ -34,7 +38,7 @@ The script is idempotent — already-installed apps are skipped and re-running i
 ### Apps (WinGet / Microsoft Store)
 
 - Git, Git LFS, GitHub CLI (`gh`)
-- .NET SDK 10 (includes `dotnet` CLI), Node.js LTS, Python 3.14
+- .NET SDK 10 (includes `dotnet` CLI), fnm with Node.js LTS, Python 3.14
 - Visual Studio 2026 Enterprise, Visual Studio Code
 - Azure CLI, PowerShell 7, Windows Terminal, PowerToys
 - Ubuntu 24.04 (WSL), 7-Zip
@@ -45,6 +49,7 @@ The script is idempotent — already-installed apps are skipped and re-running i
 - **Oh My Posh** prompt (winget source) with the `mt.omp.json` theme
 - **CaskaydiaCove Nerd Font**
 - **Terminal-Icons** and **posh-git** PowerShell modules
+- **fnm** with automatic Node version switching when a project declares one
 
 ---
 

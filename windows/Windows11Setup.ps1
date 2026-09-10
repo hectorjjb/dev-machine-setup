@@ -46,7 +46,7 @@ $apps = @(
     @{name = "Microsoft.VisualStudioCode" },
     @{name = "JanDeDobbeleer.OhMyPosh" },
     @{name = "XP89DCGQ3K6VLD"; source = "msstore" },    # Microsoft PowerToys
-    @{name = "OpenJS.NodeJS.LTS" },
+    @{name = "Schniz.fnm" },
     @{name = "Microsoft.DotNet.SDK.10" },
     @{name = "Python.Python.3.14" },
     @{name = "Canonical.Ubuntu.2404" },
@@ -123,6 +123,30 @@ if (-not $env:POSH_THEMES_PATH) {
 if (-not $env:POSH_THEMES_PATH) {
     # Fall back to the default install location used by the winget package.
     $env:POSH_THEMES_PATH = "$env:LOCALAPPDATA\Programs\oh-my-posh\themes"
+}
+
+# Install the latest Node.js LTS release through fnm and make it the default.
+try {
+    if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+        throw "fnm is unavailable after installation"
+    }
+
+    fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+    fnm install --lts
+    if ($LASTEXITCODE -ne 0) {
+        throw "fnm install exited with code $LASTEXITCODE"
+    }
+    fnm default lts-latest
+    if ($LASTEXITCODE -ne 0) {
+        throw "fnm default exited with code $LASTEXITCODE"
+    }
+    fnm use default
+    if ($LASTEXITCODE -ne 0) {
+        throw "fnm use exited with code $LASTEXITCODE"
+    }
+}
+catch {
+    Write-Output "Error configuring Node.js with fnm: $_"
 }
 
 # Install WSL
@@ -212,13 +236,38 @@ else {
     }
 }
 
-# Use the public registry for public global tools. A machine-configured package
-# feed proxy can return remote tarball URLs that npm rejects with EALLOWREMOTE.
-$npmRegistry = "https://registry.npmjs.org/"
+# Microsoft-managed devices block direct access to public npm registries. Route
+# npm, pnpm, Yarn, and Corepack through the CFS-protected package feed instead.
+$npmRegistry = "https://packagefeedproxy.microsoft.io/npm/"
+
+try {
+    npm config set registry $npmRegistry --location=user
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm config exited with code $LASTEXITCODE"
+    }
+    # npm 12 treats the proxy's Azure DevOps tarball URLs as remote packages.
+    # Direct public registry domains remain blocked by device policy.
+    npm config set allow-remote all --location=user
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm config exited with code $LASTEXITCODE"
+    }
+
+    $env:NPM_CONFIG_REGISTRY = $npmRegistry
+    $env:NPM_CONFIG_ALLOW_REMOTE = "all"
+    $env:COREPACK_NPM_REGISTRY = $npmRegistry
+    $env:YARN_NPM_REGISTRY_SERVER = $npmRegistry
+    [Environment]::SetEnvironmentVariable("NPM_CONFIG_REGISTRY", $npmRegistry, "User")
+    [Environment]::SetEnvironmentVariable("NPM_CONFIG_ALLOW_REMOTE", "all", "User")
+    [Environment]::SetEnvironmentVariable("COREPACK_NPM_REGISTRY", $npmRegistry, "User")
+    [Environment]::SetEnvironmentVariable("YARN_NPM_REGISTRY_SERVER", $npmRegistry, "User")
+}
+catch {
+    Write-Output "Error configuring the protected npm registry: $_"
+}
 
 # Update npm
 try {
-    npm install --global npm --registry=$npmRegistry
+    npm install --global npm --allow-remote=all --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
@@ -231,7 +280,7 @@ catch {
 # --allow-scripts permits yarn's preinstall script (no-op on Windows) and
 # silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global yarn --allow-scripts=yarn --registry=$npmRegistry
+    npm install --global yarn --allow-remote=all --allow-scripts=yarn --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
@@ -240,11 +289,23 @@ catch {
     Write-Output "Error installing yarn: $_"
 }
 
+# Yarn Classic keeps its own registry setting instead of relying solely on
+# .npmrc. Yarn Berry uses the persistent YARN_NPM_REGISTRY_SERVER value above.
+try {
+    yarn config set registry $npmRegistry
+    if ($LASTEXITCODE -ne 0) {
+        throw "yarn exited with code $LASTEXITCODE"
+    }
+}
+catch {
+    Write-Output "Error configuring the Yarn registry: $_"
+}
+
 # Install nx globally
 # --allow-scripts permits nx's postinstall script (soft-fails by design)
 # and silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global nx --allow-scripts=nx --registry=$npmRegistry
+    npm install --global nx --allow-remote=all --allow-scripts=nx --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
@@ -292,12 +353,12 @@ catch {
 # Configure PowerShell profile for Oh My Posh
 try {
     $profileSrc = Join-Path $ScriptDir "config\Microsoft.PowerShell_profile.ps1"
-    $profileDir = Split-Path -Parent $PROFILE.CurrentUserAllHosts
+    $profileDir = Split-Path -Parent $PROFILE.CurrentUserCurrentHost
     if (-not (Test-Path $profileDir)) {
         New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
     }
-    Copy-Item -Path $profileSrc -Destination $PROFILE.CurrentUserAllHosts -Force
-    Write-Host "Configured PowerShell profile at $($PROFILE.CurrentUserAllHosts)"
+    Copy-Item -Path $profileSrc -Destination $PROFILE.CurrentUserCurrentHost -Force
+    Write-Host "Configured PowerShell profile at $($PROFILE.CurrentUserCurrentHost)"
 }
 catch {
     Write-Output "Error configuring PowerShell profile: $_"
