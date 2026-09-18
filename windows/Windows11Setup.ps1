@@ -236,8 +236,9 @@ else {
     }
 }
 
-# Microsoft-managed devices block direct access to public npm registries. Route
-# npm, pnpm, Yarn, and Corepack through the CFS-protected package feed instead.
+# Microsoft-managed devices block direct access to public npm registries. Use
+# the CFS-protected package feed as the user-level default while allowing a
+# repository's npm/Yarn configuration to select its own authenticated feed.
 $npmRegistry = "https://packagefeedproxy.microsoft.io/npm/"
 
 try {
@@ -252,14 +253,18 @@ try {
         throw "npm config exited with code $LASTEXITCODE"
     }
 
-    $env:NPM_CONFIG_REGISTRY = $npmRegistry
     $env:NPM_CONFIG_ALLOW_REMOTE = "all"
     $env:COREPACK_NPM_REGISTRY = $npmRegistry
-    $env:YARN_NPM_REGISTRY_SERVER = $npmRegistry
-    [Environment]::SetEnvironmentVariable("NPM_CONFIG_REGISTRY", $npmRegistry, "User")
     [Environment]::SetEnvironmentVariable("NPM_CONFIG_ALLOW_REMOTE", "all", "User")
     [Environment]::SetEnvironmentVariable("COREPACK_NPM_REGISTRY", $npmRegistry, "User")
-    [Environment]::SetEnvironmentVariable("YARN_NPM_REGISTRY_SERVER", $npmRegistry, "User")
+
+    # Environment-level registry settings override project .npmrc/.yarnrc files.
+    # Remove values written by older versions of this script so repositories can
+    # use private feeds while the user-level defaults above still cover public npm.
+    Remove-Item Env:NPM_CONFIG_REGISTRY -ErrorAction SilentlyContinue
+    Remove-Item Env:YARN_NPM_REGISTRY_SERVER -ErrorAction SilentlyContinue
+    [Environment]::SetEnvironmentVariable("NPM_CONFIG_REGISTRY", $null, "User")
+    [Environment]::SetEnvironmentVariable("YARN_NPM_REGISTRY_SERVER", $null, "User")
 }
 catch {
     Write-Output "Error configuring the protected npm registry: $_"
@@ -289,16 +294,17 @@ catch {
     Write-Output "Error installing yarn: $_"
 }
 
-# Yarn Classic keeps its own registry setting instead of relying solely on
-# .npmrc. Yarn Berry uses the persistent YARN_NPM_REGISTRY_SERVER value above.
+# Remove the Yarn Classic registry override written by older versions of this
+# script. Yarn reads the user-level npm registry above, while repository
+# .npmrc files can override it for authenticated private feeds.
 try {
-    yarn config set registry $npmRegistry
+    yarn config delete registry
     if ($LASTEXITCODE -ne 0) {
         throw "yarn exited with code $LASTEXITCODE"
     }
 }
 catch {
-    Write-Output "Error configuring the Yarn registry: $_"
+    Write-Output "Error removing the legacy Yarn registry override: $_"
 }
 
 # Install nx globally
