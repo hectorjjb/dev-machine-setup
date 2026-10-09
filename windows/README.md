@@ -50,6 +50,19 @@ The script is idempotent — already-installed apps are skipped and re-running i
 - **CaskaydiaCove Nerd Font**
 - **Terminal-Icons** and **posh-git** PowerShell modules
 - **fnm** with automatic Node version switching when a project declares one
+- **`npmauth`** (`Update-NpmAuth`) — refreshes ADO package-feed credentials
+  (`vsts-npm-auth`) for the current repo. Microsoft-managed devices block
+  direct access to the public npm registry, so plain `npx vsts-npm-auth`
+  can fail even when the repo's own `.npmrc`-driven installs work: npx
+  inherits the project's `.npmrc` registry (often a private, authenticated
+  ADO feed) to resolve `vsts-npm-auth` itself, which is a catch-22 when
+  that feed's token is the very thing that's stale. `npmauth` always
+  fetches the `vsts-npm-auth` tool via the Microsoft-approved public npm
+  proxy, while refreshing credentials for whichever feed the nearest
+  `.npmrc` (walked up from the current directory, or passed explicitly)
+  actually declares — nothing about the target feed is hardcoded. Run it
+  from anywhere inside a repo whenever `yarn install`/`npm install` fails
+  with a `401` on a private feed.
 
 ---
 
