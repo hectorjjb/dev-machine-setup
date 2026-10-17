@@ -30,8 +30,8 @@ if (Get-Command fnm -ErrorAction SilentlyContinue) {
 # resolve vsts-npm-auth itself, creating a catch-22 when that feed's
 # token is the very thing that's stale.
 #
-# Fix: always fetch the vsts-npm-auth tool via the Microsoft-approved
-# public npm proxy (the one known to be reachable from this device),
+# Fix: fetch the vsts-npm-auth tool via the registry selected during setup
+# (the Microsoft-approved proxy for work, public npm for personal devices),
 # while passing -config to the nearest .npmrc so credentials are
 # refreshed for whatever private feed that project actually declares.
 # Nothing about the target feed/registry is hardcoded here.
@@ -61,7 +61,7 @@ function Update-NpmAuth {
 
     $proxyRegistry = $env:COREPACK_NPM_REGISTRY
     if (-not $proxyRegistry) {
-        $proxyRegistry = "https://packagefeedproxy.microsoft.io/npm/"
+        $proxyRegistry = "https://registry.npmjs.org/"
     }
 
     npx --registry=$proxyRegistry vsts-npm-auth -config $NpmrcPath -F

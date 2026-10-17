@@ -10,6 +10,14 @@ if (-not $isAdmin) {
     exit 1
 }
 
+do {
+    $deviceType = (Read-Host "Is this a personal or work device? Enter personal or work").Trim().ToLowerInvariant()
+    if ($deviceType -notin @("personal", "work")) {
+        Write-Warning "Please enter personal or work."
+    }
+} until ($deviceType -in @("personal", "work"))
+$isWorkDevice = $deviceType -eq "work"
+
 #Install WinGet
 #Based on this gist: https://gist.github.com/crutkas/6c2096eae387e544bd05cde246f23901
 $hasPackageManager = Get-AppPackage -name 'Microsoft.DesktopAppInstaller'
@@ -40,7 +48,6 @@ $apps = @(
     @{name = "Git.Git" },
     @{name = "GitHub.cli" },
     @{name = "GitHub.GitLFS" },
-    @{name = "Microsoft.AzureCLI" },
     @{name = "Microsoft.PowerShell" },
     @{name = "Microsoft.WindowsTerminal" },
     @{name = "Microsoft.VisualStudioCode" },
@@ -49,18 +56,23 @@ $apps = @(
     @{name = "Schniz.fnm" },
     @{name = "Microsoft.DotNet.SDK.10" },
     @{name = "Python.Python.3.14" },
-    @{name = "Canonical.Ubuntu.2404" },
-    @{name = "Microsoft.VisualStudio.Enterprise" },    # Visual Studio 2026 Enterprise
     # @{name = "Microsoft.Azure.StorageExplorer" },
     # @{name = "Postman.Postman" },
     # @{name = "Google.Chrome" },
     @{name = "9NCBCSZSJRSB"; source = "msstore" },     # Spotify
     @{name = "9NKSQGP7F2NH"; source = "msstore" },     # WhatsApp
-    @{name = "9WZDNCRFJ3TJ"; source = "msstore" },     # Netflix
+    # @{name = "9WZDNCRFJ3TJ"; source = "msstore" },     # Netflix
     @{name = "XP9CDQW6ML4NQN"; source = "msstore" },   # Plex
     @{name = "7zip.7zip" }
     # @{name = "XP99J3KP4XZ4VV"; source = "msstore" }  # Zoom
 );
+
+if ($isWorkDevice) {
+    $apps += @(
+        @{name = "Microsoft.AzureCLI" },
+        @{name = "Microsoft.VisualStudio.Enterprise" }    # Visual Studio 2026 Enterprise
+    )
+}
 
 foreach ($app in $apps) {
     try {
@@ -149,27 +161,83 @@ catch {
     Write-Output "Error configuring Node.js with fnm: $_"
 }
 
-# Install WSL
+# Install WSL and Ubuntu, with optional cleanup, only on work devices.
 # https://learn.microsoft.com/en-us/windows/wsl/install
-$wslFreshlyInstalled = $false
-if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
-    wsl --status 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "WSL already installed. Skipping..."
-    }
-    else {
-        # Ubuntu is installed separately by winget, so only enable WSL itself.
-        wsl --install --no-distribution
-        if ($LASTEXITCODE -eq 0) {
-            $wslFreshlyInstalled = $true
+if ($isWorkDevice) {
+    try {
+        if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
+            throw "wsl.exe is unavailable; restart Windows and run this script again."
+        }
+
+        $wslReady = $false
+        wsl.exe --status 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            wsl.exe --install --no-distribution
+            if ($LASTEXITCODE -notin @(0, 3010)) {
+                throw "WSL installation exited with code $LASTEXITCODE"
+            }
+            Write-Warning "Restart Windows and run this script again to finish WSL setup."
         }
         else {
-            Write-Output "Error installing WSL (exit code $LASTEXITCODE)."
+            # Ubuntu's tar-based distribution format requires a recent WSL release.
+            wsl.exe --update
+            if ($LASTEXITCODE -eq 3010) {
+                Write-Warning "WSL was updated; restart Windows and run this script again to finish WSL setup."
+            }
+            elseif ($LASTEXITCODE -ne 0) {
+                throw "WSL update exited with code $LASTEXITCODE"
+            }
+            else {
+                $wslReady = $true
+            }
+        }
+
+        if ($wslReady) {
+            $installedDistros = @(wsl.exe --list --quiet)
+            if ($LASTEXITCODE -ne 0) {
+                throw "Listing WSL distributions exited with code $LASTEXITCODE"
+            }
+            # Windows PowerShell can retain NUL characters in WSL's UTF-16 output.
+            $installedDistros = $installedDistros | ForEach-Object { $_.Replace("`0", "").Trim() }
+            if ($installedDistros -contains "Ubuntu-26.04") {
+                Write-Host "Ubuntu 26.04 LTS already installed. Skipping..."
+                $olderUbuntuDistros = $installedDistros | Where-Object {
+                    $_ -match '^Ubuntu-(\d{2}\.\d{2})$' -and
+                    [version]($Matches[1]) -lt [version]"26.04"
+                }
+                foreach ($distro in $olderUbuntuDistros) {
+                    Write-Warning "Removing '$distro' permanently deletes all its Linux files, packages, and settings. No backup will be created."
+                    $confirmation = Read-Host "Only proceed if Ubuntu 26.04 is ready and you no longer need this data. Type '$distro' to delete it, or press Enter to keep it"
+                    if ($confirmation -ceq $distro) {
+                        wsl.exe --unregister $distro
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Removing '$distro' exited with code $LASTEXITCODE"
+                        }
+                        Write-Host "Removed '$distro'."
+                    }
+                    else {
+                        Write-Host "Keeping '$distro'."
+                    }
+                }
+            }
+            else {
+                wsl.exe --install --distribution Ubuntu-26.04 --no-launch
+                if ($LASTEXITCODE -eq 3010) {
+                    Write-Warning "Restart Windows to finish installing Ubuntu 26.04 LTS."
+                }
+                elseif ($LASTEXITCODE -ne 0) {
+                    throw "Ubuntu 26.04 LTS installation exited with code $LASTEXITCODE"
+                }
+                else {
+                    Write-Host "Ubuntu 26.04 LTS installed. Run 'wsl -d Ubuntu-26.04' to complete first-time user setup."
+                    Write-Host "After verifying Ubuntu 26.04 and moving any needed files, re-run this script for optional cleanup of older Ubuntu releases."
+                }
+            }
         }
     }
-}
-else {
-    Write-Output "wsl.exe is unavailable; restart Windows and run this script again."
+    catch {
+        Write-Output "Error configuring WSL and Ubuntu: $_"
+    }
 }
 
 # Enable long paths
@@ -223,39 +291,40 @@ catch {
     Write-Output "Error enabling git lfs: $_"
 }
 
-# Update WSL (skip if WSL was just installed — needs a reboot first)
-if ($wslFreshlyInstalled) {
-    Write-Host "WSL was just installed — skipping 'wsl --update' until after reboot."
+# Keep registry defaults at user level so repositories can select private feeds.
+$npmRegistry = if ($isWorkDevice) {
+    "https://packagefeedproxy.microsoft.io/npm/"
 }
 else {
-    try {
-        wsl --update
-    }
-    catch {
-        Write-Output "Error updating WSL: $_"
-    }
+    "https://registry.npmjs.org/"
 }
-
-# Microsoft-managed devices block direct access to public npm registries. Use
-# the CFS-protected package feed as the user-level default while allowing a
-# repository's npm/Yarn configuration to select its own authenticated feed.
-$npmRegistry = "https://packagefeedproxy.microsoft.io/npm/"
+[string[]]$npmRemoteArgs = if ($isWorkDevice) { @("--allow-remote=all") } else { @() }
 
 try {
     npm config set registry $npmRegistry --location=user
     if ($LASTEXITCODE -ne 0) {
         throw "npm config exited with code $LASTEXITCODE"
     }
-    # npm 12 treats the proxy's Azure DevOps tarball URLs as remote packages.
-    # Direct public registry domains remain blocked by device policy.
-    npm config set allow-remote all --location=user
+    if ($isWorkDevice) {
+        # npm 12 treats the proxy's Azure DevOps tarball URLs as remote packages.
+        npm config set allow-remote all --location=user
+    }
+    else {
+        npm config delete allow-remote --location=user
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "npm config exited with code $LASTEXITCODE"
     }
 
-    $env:NPM_CONFIG_ALLOW_REMOTE = "all"
+    if ($isWorkDevice) {
+        $env:NPM_CONFIG_ALLOW_REMOTE = "all"
+        [Environment]::SetEnvironmentVariable("NPM_CONFIG_ALLOW_REMOTE", "all", "User")
+    }
+    else {
+        Remove-Item Env:NPM_CONFIG_ALLOW_REMOTE -ErrorAction SilentlyContinue
+        [Environment]::SetEnvironmentVariable("NPM_CONFIG_ALLOW_REMOTE", $null, "User")
+    }
     $env:COREPACK_NPM_REGISTRY = $npmRegistry
-    [Environment]::SetEnvironmentVariable("NPM_CONFIG_ALLOW_REMOTE", "all", "User")
     [Environment]::SetEnvironmentVariable("COREPACK_NPM_REGISTRY", $npmRegistry, "User")
 
     # Environment-level registry settings override project .npmrc/.yarnrc files.
@@ -267,12 +336,12 @@ try {
     [Environment]::SetEnvironmentVariable("YARN_NPM_REGISTRY_SERVER", $null, "User")
 }
 catch {
-    Write-Output "Error configuring the protected npm registry: $_"
+    Write-Output "Error configuring the $deviceType npm registry: $_"
 }
 
 # Update npm
 try {
-    npm install --global npm --allow-remote=all --registry=$npmRegistry
+    npm install --global npm @npmRemoteArgs --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
@@ -285,7 +354,7 @@ catch {
 # --allow-scripts permits yarn's preinstall script (no-op on Windows) and
 # silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global yarn --allow-remote=all --allow-scripts=yarn --registry=$npmRegistry
+    npm install --global yarn @npmRemoteArgs --allow-scripts=yarn --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
@@ -311,7 +380,7 @@ catch {
 # --allow-scripts permits nx's postinstall script (soft-fails by design)
 # and silences npm 11+ allow-scripts warnings.
 try {
-    npm install --global nx --allow-remote=all --allow-scripts=nx --registry=$npmRegistry
+    npm install --global nx @npmRemoteArgs --allow-scripts=nx --registry=$npmRegistry
     if ($LASTEXITCODE -ne 0) {
         throw "npm exited with code $LASTEXITCODE"
     }
