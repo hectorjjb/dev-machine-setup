@@ -20,6 +20,17 @@ bash mac/setup-new-mac.sh
 ```
 
 ### Windows
+
+Open **PowerShell as Administrator**, navigate to the repository root, then run:
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File windows\Windows11Setup.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\windows\Windows11Setup.ps1"
 ```
+
+The execution-policy bypass applies only to the new PowerShell process; it does
+not permanently change your device's policy. Running as Administrator alone does
+not allow scripts, and the policy command inside the script cannot unblock it
+because PowerShell checks the policy before executing its first line.
+
+See [Windows setup instructions](windows/README.md#execution-policy-troubleshooting)
+for an alternative command sequence and managed-device troubleshooting.

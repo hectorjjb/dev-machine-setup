@@ -2,11 +2,15 @@
 
 ## Quick Start
 
-Run from an **elevated** PowerShell prompt (Run as Administrator):
+Open **PowerShell as Administrator**, navigate to the repository root, then run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File windows\Windows11Setup.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\windows\Windows11Setup.ps1"
 ```
+
+The execution-policy bypass applies only to that new PowerShell process and does
+not permanently change your device's policy. `-NoProfile` skips loading an existing
+PowerShell profile for this run.
 
 When prompted, enter **personal** or **work**. Work devices use Microsoft's
 CFS-protected package feed; personal devices use the standard public npm registry.
@@ -19,6 +23,36 @@ The script is idempotent — already-installed apps are skipped. Older Ubuntu
 cleanup is optional and requires explicit confirmation for each distribution.
 Re-running with **personal** also removes the work-specific remote-package allowance
 and replaces the work registry defaults. Repository-specific feeds remain supported.
+
+### Execution Policy Troubleshooting
+
+If you see "running scripts is disabled on this system", running as Administrator
+alone does not resolve it. PowerShell checks execution policy **before executing
+the script's first line**, so the `Set-ExecutionPolicy` command at the top of
+`Windows11Setup.ps1` cannot unblock the script itself.
+
+Use the Quick Start command above, or enter these commands directly into the
+**same elevated PowerShell window**, from the repository root:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\windows\Windows11Setup.ps1
+```
+
+Enter the policy command in the PowerShell prompt, not inside the script.
+This process-scoped change lasts only until that PowerShell window closes.
+
+If the script is still blocked, inspect the effective policy and its scopes:
+
+```powershell
+Get-ExecutionPolicy
+Get-ExecutionPolicy -List
+```
+
+On a managed device, organization-enforced `MachinePolicy` or `UserPolicy`
+settings take precedence over a process-scoped bypass, even as Administrator.
+Contact IT for an approved way to run the script, such as a signed version;
+do not change machine-wide policy to work around organizational restrictions.
 
 ---
 
