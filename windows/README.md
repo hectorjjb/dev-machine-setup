@@ -54,6 +54,18 @@ settings take precedence over a process-scoped bypass, even as Administrator.
 Contact IT for an approved way to run the script, such as a signed version;
 do not change machine-wide policy to work around organizational restrictions.
 
+### Parser Errors on Windows PowerShell 5.1
+
+If an older copy reports "The string is missing the terminator" along with missing
+braces or `Catch`/`Finally` blocks, download the latest version of the script.
+Older versions contained a UTF-8 em dash in a message. Windows PowerShell 5.1
+reads UTF-8 files without a byte-order mark using the system's legacy encoding,
+which can turn that character into a quotation mark and break parsing.
+
+The setup script uses ASCII text to avoid this problem on new devices running
+the built-in Windows PowerShell. Changing execution policy does not fix parser
+errors.
+
 ---
 
 ## What the Script Does

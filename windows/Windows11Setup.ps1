@@ -1,6 +1,6 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
-# Require elevation — several steps (registry, system-scope git config,
+# Require elevation - several steps (registry, system-scope git config,
 # Remove-AppxPackage -AllUsers, WSL feature) silently fail without it.
 $isAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -409,7 +409,7 @@ try {
         Write-Host "Copied mt.omp.json to $themeDst"
     }
     else {
-        Write-Host "POSH_THEMES_PATH not set — skipping theme copy"
+        Write-Host "POSH_THEMES_PATH not set - skipping theme copy"
     }
 }
 catch {
