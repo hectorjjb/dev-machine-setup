@@ -12,8 +12,18 @@ The execution-policy bypass applies only to that new PowerShell process.
 Setup also persists `RemoteSigned` at `CurrentUser` scope unless an organizational
 policy is configured, so your profile can load in future sessions after restarting
 Windows. `-NoProfile` skips loading an existing PowerShell profile for this run.
+After copying the bundled profile, setup unblocks that specific installed file
+so an Internet-download marker inherited from a downloaded ZIP does not prevent
+it from loading under `RemoteSigned`.
 Run setup as the Windows account that will use the profile; `CurrentUser` applies
 to the account running setup.
+
+Setup also sets Windows Terminal as the current user's default terminal
+application after verifying it is installed, and selects modern PowerShell 7
+(`pwsh.exe`) as Terminal's default shell instead of Windows PowerShell 5.1.
+The bundled startup profile is installed and unblocked for both the setup shell
+and PowerShell 7. Existing Terminal settings and other profiles are retained;
+rewriting `settings.json` normalizes formatting and removes JSON comments.
 
 When prompted, enter **personal** or **work**. Work devices use Microsoft's
 CFS-protected package feed; personal devices use the standard public npm registry.
@@ -75,9 +85,16 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 
 Close and reopen PowerShell, then check `Get-ExecutionPolicy -List` if it is
 still blocked. `RemoteSigned` allows local scripts but requires downloaded scripts
-to be signed or explicitly unblocked. If an error instead says a script is
-not digitally signed, review that specific file before using `Unblock-File`;
-do not recursively unblock your OneDrive folder or change its permissions.
+to be signed or explicitly unblocked. If an error instead says the profile is
+not digitally signed, review the profile and then unblock only that trusted file:
+
+```powershell
+Unblock-File -LiteralPath $PROFILE.CurrentUserCurrentHost -ErrorAction Stop
+```
+
+Setup now does this automatically after copying the bundled profile. On each
+new device, run setup rather than relying on OneDrive to sync execution policy
+or file trust metadata. Do not recursively unblock your OneDrive folder or change its permissions.
 Organization-enforced policies still take precedence.
 
 ### Parser Errors on Windows PowerShell 5.1
@@ -97,7 +114,9 @@ errors.
 ## What the Script Does
 
 1. **Installs WinGet** (Windows Package Manager) if missing or outdated, and enables the experimental Microsoft Store source.
-2. **Installs apps** via WinGet and the Microsoft Store (see list below).
+2. **Installs apps** via WinGet and the Microsoft Store (see list below), then
+   sets Windows Terminal as the current user's default terminal application.
+   After shell setup, selects PowerShell 7 as Terminal's default shell.
 3. **Removes** unwanted pre-installed apps (3D Print, Mixed Reality Portal,
    Skype, Bing News/Weather, Get Help, Tips, Feedback Hub, Clipchamp,
    Quick Assist).
@@ -126,6 +145,7 @@ errors.
 ### Apps (WinGet / Microsoft Store)
 
 - Git, Git LFS, GitHub CLI (`gh`)
+- GitHub Copilot CLI (`copilot`) from the Microsoft Store
 - .NET SDK 10 (includes `dotnet` CLI), fnm with Node.js LTS, Python 3.14
 - Visual Studio Code, PowerShell 7, Windows Terminal, PowerToys, 7-Zip
 - **Work devices only:** Azure CLI, Visual Studio 2026 Enterprise

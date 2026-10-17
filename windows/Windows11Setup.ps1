@@ -70,6 +70,7 @@ $apps = @(
     @{name = "Git.Git" },
     @{name = "GitHub.cli" },
     @{name = "GitHub.GitLFS" },
+    @{name = "XPDC8MMRVCF73P"; source = "msstore" },  # GitHub Copilot CLI
     @{name = "Microsoft.PowerShell" },
     @{name = "Microsoft.WindowsTerminal" },
     @{name = "Microsoft.VisualStudioCode" },
@@ -115,6 +116,27 @@ foreach ($app in $apps) {
     catch {
         Write-Output "Error installing $($app.name): $_"
     }
+}
+
+# Set Windows Terminal as the current user's default terminal application.
+try {
+    if (-not (Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction Stop)) {
+        throw "Windows Terminal is not installed for the current user."
+    }
+
+    # https://support.microsoft.com/en-us/windows/apps/command-prompt-and-windows-powershell
+    $terminalStartupKey = "HKCU:\Console\%%Startup"
+    if (-not (Test-Path -LiteralPath $terminalStartupKey -ErrorAction Stop)) {
+        New-Item -Path $terminalStartupKey -Force -ErrorAction Stop | Out-Null
+    }
+    New-ItemProperty -LiteralPath $terminalStartupKey -Name "DelegationConsole" `
+        -Value "{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}" -PropertyType String -Force -ErrorAction Stop | Out-Null
+    New-ItemProperty -LiteralPath $terminalStartupKey -Name "DelegationTerminal" `
+        -Value "{E12CFF52-A866-4C77-9A90-F570A7AA2C6B}" -PropertyType String -Force -ErrorAction Stop | Out-Null
+    Write-Host "Windows Terminal is the default terminal application for the current user."
+}
+catch {
+    Write-Error "Error setting Windows Terminal as the default terminal application: $_"
 }
 
 #Remove Apps
@@ -450,13 +472,72 @@ catch {
 # Configure PowerShell profile for Oh My Posh
 try {
     $profileSrc = Join-Path $ScriptDir "config\Microsoft.PowerShell_profile.ps1"
-    $profileDir = Split-Path -Parent $PROFILE.CurrentUserCurrentHost
-    if (-not (Test-Path $profileDir)) {
-        New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+    $powerShellExe = (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source
+    $modernProfile = & $powerShellExe -NoLogo -NoProfile -NonInteractive -Command '$PROFILE.CurrentUserCurrentHost'
+    if ($LASTEXITCODE -ne 0 -or -not $modernProfile) {
+        throw "Could not determine the PowerShell 7 profile path."
     }
-    Copy-Item -Path $profileSrc -Destination $PROFILE.CurrentUserCurrentHost -Force
-    Write-Host "Configured PowerShell profile at $($PROFILE.CurrentUserCurrentHost)"
+    $profilePaths = @($PROFILE.CurrentUserCurrentHost, $modernProfile) | Select-Object -Unique
+    foreach ($profilePath in $profilePaths) {
+        $profileDir = Split-Path -Parent $profilePath
+        if (-not (Test-Path $profileDir)) {
+            New-Item -ItemType Directory -Path $profileDir -Force -ErrorAction Stop | Out-Null
+        }
+        Copy-Item -Path $profileSrc -Destination $profilePath -Force -ErrorAction Stop
+        # Downloaded ZIPs can propagate an Internet-zone marker to the installed profile.
+        Unblock-File -LiteralPath $profilePath -ErrorAction Stop
+        Write-Host "Configured PowerShell profile at $profilePath"
+    }
 }
 catch {
-    Write-Output "Error configuring PowerShell profile: $_"
+    Write-Error "Error configuring PowerShell profiles: $_"
+}
+
+# Use PowerShell 7 to read Terminal's JSON-with-comments settings.
+try {
+    $terminalPackage = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction Stop
+    if (-not $terminalPackage) {
+        throw "Windows Terminal is not installed for the current user."
+    }
+    $powerShellExe = (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source
+    $terminalSettingsPath = Join-Path $env:LOCALAPPDATA "Packages\$($terminalPackage.PackageFamilyName)\LocalState\settings.json"
+    $configureTerminalShell = {
+        param([string]$settingsPath)
+        $ErrorActionPreference = "Stop"
+        if ($PSVersionTable.PSVersion.Major -lt 7) {
+            throw "PowerShell 7 or later is required."
+        }
+        $settings = if (Test-Path -LiteralPath $settingsPath) {
+            Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json -AsHashtable
+        }
+        else { @{} }
+        if ($settings -isnot [System.Collections.IDictionary]) {
+            throw "Windows Terminal settings must contain a JSON object."
+        }
+
+        $profileGuid = "{574e775e-4f2a-5b96-ac1e-a2962a402336}"
+        if (-not $settings.Contains("profiles")) { $settings["profiles"] = @{} }
+        $profiles = @($settings["profiles"]["list"])
+        $powerShellProfile = $profiles | Where-Object { $_ -and $_["guid"] -eq $profileGuid } | Select-Object -First 1
+        if (-not $powerShellProfile) {
+            $powerShellProfile = @{ guid = $profileGuid; name = "PowerShell" }
+            $profiles = @($profiles | Where-Object { $null -ne $_ }) + @($powerShellProfile)
+        }
+        $powerShellProfile["commandline"] = '"' + (Join-Path $PSHOME "pwsh.exe") + '"'
+        $powerShellProfile["hidden"] = $false
+        $settings["profiles"]["list"] = $profiles
+        $settings["defaultProfile"] = $profileGuid
+
+        $json = $settings | ConvertTo-Json -Depth 100 -WarningAction Stop
+        New-Item -ItemType Directory -Path (Split-Path -Parent $settingsPath) -Force | Out-Null
+        Set-Content -LiteralPath $settingsPath -Value $json -Encoding utf8
+    }
+    & $powerShellExe -NoLogo -NoProfile -NonInteractive -Command $configureTerminalShell -args $terminalSettingsPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "PowerShell 7 terminal configuration exited with code $LASTEXITCODE."
+    }
+    Write-Host "PowerShell 7 is the default shell in Windows Terminal."
+}
+catch {
+    Write-Error "Error setting PowerShell 7 as the default shell: $_"
 }
