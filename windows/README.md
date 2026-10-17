@@ -8,9 +8,12 @@ Open **PowerShell as Administrator**, navigate to the repository root, then run:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\windows\Windows11Setup.ps1"
 ```
 
-The execution-policy bypass applies only to that new PowerShell process and does
-not permanently change your device's policy. `-NoProfile` skips loading an existing
-PowerShell profile for this run.
+The execution-policy bypass applies only to that new PowerShell process.
+Setup also persists `RemoteSigned` at `CurrentUser` scope unless an organizational
+policy is configured, so your profile can load in future sessions after restarting
+Windows. `-NoProfile` skips loading an existing PowerShell profile for this run.
+Run setup as the Windows account that will use the profile; `CurrentUser` applies
+to the account running setup.
 
 When prompted, enter **personal** or **work**. Work devices use Microsoft's
 CFS-protected package feed; personal devices use the standard public npm registry.
@@ -53,6 +56,29 @@ On a managed device, organization-enforced `MachinePolicy` or `UserPolicy`
 settings take precedence over a process-scoped bypass, even as Administrator.
 Contact IT for an approved way to run the script, such as a signed version;
 do not change machine-wide policy to work around organizational restrictions.
+
+### OneDrive Profile Blocked After Restart
+
+OneDrive can redirect Documents, so a profile under
+`OneDrive\Documents\WindowsPowerShell` is expected. OneDrive syncs the profile
+file, not the device's execution policy. An error saying "running scripts is
+disabled on this system" is an execution-policy failure, even if its error ID
+includes `UnauthorizedAccess`; it is not evidence of incorrect file permissions.
+
+Setup now persists `RemoteSigned` for the current user rather than relying only
+on the temporary setup bypass. To fix a previously configured device without
+re-running the full setup, enter this directly into PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+```
+
+Close and reopen PowerShell, then check `Get-ExecutionPolicy -List` if it is
+still blocked. `RemoteSigned` allows local scripts but requires downloaded scripts
+to be signed or explicitly unblocked. If an error instead says a script is
+not digitally signed, review that specific file before using `Unblock-File`;
+do not recursively unblock your OneDrive folder or change its permissions.
+Organization-enforced policies still take precedence.
 
 ### Parser Errors on Windows PowerShell 5.1
 

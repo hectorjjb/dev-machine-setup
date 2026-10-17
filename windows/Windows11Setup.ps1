@@ -10,6 +10,28 @@ if (-not $isAdmin) {
     exit 1
 }
 
+# OneDrive syncs the profile, but execution policy is local to each device.
+$machinePolicy = Get-ExecutionPolicy -Scope MachinePolicy
+$userPolicy = Get-ExecutionPolicy -Scope UserPolicy
+if ($machinePolicy -ne "Undefined" -or $userPolicy -ne "Undefined") {
+    Write-Warning "Execution policy is managed by your organization. Profile loading after restart depends on that policy; contact IT if it is blocked."
+}
+else {
+    if ((Get-ExecutionPolicy -Scope CurrentUser) -ne "RemoteSigned") {
+        try {
+            Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
+        }
+        catch {
+            # The process-scoped Bypass can report an override after saving successfully.
+            if ((Get-ExecutionPolicy -Scope CurrentUser) -ne "RemoteSigned") {
+                throw
+            }
+            Write-Warning "CurrentUser RemoteSigned was saved, but this setup process overrides it: $_"
+        }
+    }
+    Write-Host "CurrentUser execution policy is RemoteSigned; it persists after restarting Windows."
+}
+
 do {
     $deviceType = (Read-Host "Is this a personal or work device? Enter personal or work").Trim().ToLowerInvariant()
     if ($deviceType -notin @("personal", "work")) {
